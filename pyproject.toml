@@ -1,0 +1,15 @@
+[project]
+name = "devanture"
+version = "0.0.1"
+authors = [
+  { name="Laury AKONGUINA", email="laury.akonguina@icloud.com" },
+]
+description = "A small frontend package"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "ruff>=0.13.2",
+]

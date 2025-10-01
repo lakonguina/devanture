@@ -1,7 +1,7 @@
 """Components."""
-from typing import Callable
 
 _current_app = None
+
 
 def set_app(app) -> None:
     """Set the current FastAPI app instance once for component routing."""
@@ -13,13 +13,14 @@ def set_app(app) -> None:
 
 def get_endpoint_path(endpoint_fn) -> str | None:
     """Retrieve the path for a given endpoint function by inspecting app routes."""
-    app = get_current_app()
+    app = _current_app
     if not app:
         return None
     for route in app.routes:
-        if hasattr(route, 'endpoint') and route.endpoint == endpoint_fn:
+        if hasattr(route, "endpoint") and route.endpoint == endpoint_fn:
             return route.path
     return None
+
 
 class Text:
     def __init__(self, tag: str, text: str):
@@ -28,6 +29,7 @@ class Text:
 
     def __html__(self) -> str:
         return f"<{self.tag}>{self.text}</{self.tag}>"
+
 
 tags = (
     "P",
@@ -47,21 +49,17 @@ for cls_name in tags:
         cls_name,
         (Text,),
         {
-            "__init__": (
-                lambda t: lambda self, text: Text.__init__(self, t, text))(cls_name.lower())
-        }
+            "__init__": (lambda t: lambda self, text: Text.__init__(self, t, text))(
+                cls_name.lower()
+            )
+        },
     )
 
-def get_endpoint_path(endpoint) -> str | None:
-    """Retrieve the path for a given endpoint function by inspecting app routes."""
-    for route in _current_app.routes:
-        if hasattr(route, 'endpoint') and route.endpoint == endpoint:
-            return route.path
-    return None
 
-
-class Table():
-    def __init__(self, columns: list[str] = [], data: list[dict] = [], id: str | None = None):
+class Table:
+    def __init__(
+        self, columns: list[str] = [], data: list[dict] = [], id: str | None = None
+    ):
         self.data = data
         self.columns = columns
         self.id = id
@@ -76,14 +74,13 @@ class Table():
     def __html__(self) -> str:
         return f"""
         <table id="{self.id}">
-            <tr>{''.join(f'<th>{c}</th>' for c in self.columns)}</tr>
+            <tr>{"".join(f"<th>{c}</th>" for c in self.columns)}</tr>
             {self.rows(self.data)}
         </table>
         """
 
     def html(self) -> str:
         return self.__html__()
-
 
 
 class Input:
@@ -102,12 +99,12 @@ class Input:
         self.name = name
         self.placeholder = placeholder
         self.type_ = type_
-        self.get = get_endpoint_path(get)
-        self.trigger = trigger
-        self.target = f"#{target.id}"
+        self.get = get_endpoint_path(get) if get else None
+        self.trigger = "keyup " if not trigger and target else None
+        self.target = f"#{target.id}" if target else None
         self.include = include
         self.on = on
-        self.swap = swap
+        self.swap = "outerHTML" if not swap and target else None
 
     def __html__(self) -> str:
         attrs = [
@@ -130,7 +127,50 @@ class Input:
         return f"<input {' '.join(attrs)}>"
 
 
-class Page():
+class Button:
+    def __init__(
+        self,
+        text: str,
+        disabled: bool = False,
+        type_: str = "button",
+    ):
+        self.text = text
+        self.disabled = disabled
+        self.type_ = type_
+
+    def __html__(self):
+        return f"""<button type={self.type_} {"" if not self.disabled else "disabled"}>
+            {self.text}
+            </button>
+            """
+
+
+class Form:
+    def __init__(
+        self,
+        method: str,
+        action,
+        inputs: list,
+        submit: Button | None = None,
+        reset: Button | None = None,
+    ):
+        self.method = method
+        self.action = get_endpoint_path(action)
+        self.submit = submit
+        self.reset = reset
+        self.inputs = inputs
+
+    def __html__(self) -> str:
+        return f"""
+        <form action={self.action} method={self.method}>
+            {"".join(i.__html__() for i in self.inputs)}
+            {self.submit.__html__() if self.submit else ""}
+            {self.reset.__html__() if self.reset else ""}
+        </form>
+        """
+
+
+class Page:
     def __init__(self, title: str, components: list):
         self.title = title
         self.components = components
@@ -150,6 +190,7 @@ class Page():
         </script>
         </html>
         """
+
 
 def render(page: Page) -> str:
     return page.__html__()
